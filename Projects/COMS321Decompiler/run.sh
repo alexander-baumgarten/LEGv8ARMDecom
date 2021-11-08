@@ -1,1 +1,1 @@
-decom.py $1
+py decom.py $1
