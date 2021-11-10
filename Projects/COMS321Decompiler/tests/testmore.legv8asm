@@ -1,0 +1,3 @@
+ADD X1, X1, X2
+ADDI X1, X1, #2
+STUR X2, [X1, #0]
