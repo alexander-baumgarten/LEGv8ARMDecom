@@ -4,9 +4,9 @@ import sys
 
 instruction_dict = [
   ["ADD", 0b10001011000, "R"], ###
-  ["ADDI", 0b1001000100, "I"],
+  ["ADDI", 0b1001000100, "I"], ###
   ["AND", 0b10001010000, "R"], ###
-  ["ANDI", 0b1001001000, "I"],
+  ["ANDI", 0b1001001000, "I"], ###
   ["B", 0b000101, "B"],
   ["BL", 0b100101, "B"],
   ["BR", 0b11010110000, "R"], ###
@@ -14,19 +14,19 @@ instruction_dict = [
   ["CBZ", 0b10110100, "CB"],
   ["DUMP", 0b11111111110, "DUMP"],
   ["EOR", 0b11001010000, "R"], ###
-  ["EORI", 0b1101001000, "I"],
+  ["EORI", 0b1101001000, "I"], ###
   ["HALT", 0b11111111111, "HALT"],
-  ["LDUR", 0b11111000010, "D"],
+  ["LDUR", 0b11111000010, "D"], ###
   ["LSL", 0b11010011011, "R"], ###
   ["LSR", 0b11010011010, "R"], ###
   ["ORR", 0b10101010000, "R"], ###
-  ["ORRI", 0b1011001000, "I"],
+  ["ORRI", 0b1011001000, "I"], ###
   ["PRNL", 0b11111111100, "PRNL"],
   ["PRNT", 0b11111111101, "PRNT"],
-  ["STUR", 0b11111000000, "D"],
+  ["STUR", 0b11111000000, "D"], ###
   ["SUB", 0b11001011000, "R"], ###
-  ["SUBI", 0b1101000100, "I"],
-  ["SUBIS", 0b1111000100, "I"],
+  ["SUBI", 0b1101000100, "I"], ###
+  ["SUBIS", 0b1111000100, "I"], ###
   ["SUBS", 0b11101011000, "R"], ###
   ["MUL", 0b10011011000, "R"] ###
 ]
@@ -71,15 +71,17 @@ def decodeIInstruction(instruction, instruction_info):
 
 
 def decodeDInstruction(instruction, instruction_info):
+    print(str(instruction))
     opcode = instruction[2:13]
-    DT_addreess = instruction[13:24]
+    DT_addreess = instruction[13:22]
+    op = instruction[22:24]
     Rn = instruction[24:29]
     Rd = instruction[29:]
 
-    print(opcode + " " + DT_addreess + " " + Rn + " " + Rd)
+    print(opcode + " " + DT_addreess + " " + op + " " + Rn + " " + Rd)
     
     if instruction_info[0] == "STUR" or "LDUR":
-        print(instruction[0] + " X" + str(int(Rd, 2)) + ", [X" + str(int(Rn, 2)) + ", #" + str(int(DT_addreess, 2) + "]"))
+        print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", [X" + str(int(Rn, 2)) + ", #" + str(int(DT_addreess, 2)) + "]")
     else:
         print("Error decoding D type instruction. Instruction data: " + instruction_info +
               ". Instruction binary: " + instruction)
