@@ -58,15 +58,38 @@ def decodeRInstruction(instruction, instruction_info):
 
 
 def decodeIInstruction(instruction, instruction_info):
-    opcode = instruction[2:12]
+    opcode = instruction[2:12] 
     ALU_immediate = instruction[12:23]
     Rn = instruction[23:29]
     Rd = instruction[29:]
+    print(opcode + " " + ALU_immediate + " " + Rn + " " + Rd)
+    if instruction_info[0] == "ADDI" or "ANDI" or "ORRI" or "SUBI" or "EORI" or "SUBIS": 
+        print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", X" + str(int(Rn, 2)) + ", #" + str(int(ALU_immediate, 2)))
+    else:
+        print("Error decoding I type instruction. Instruction data: " + instruction_info +
+              ". Instruction binary: " + instruction)
+
 
 def decodeDInstruction(instruction, instruction_info):
-    print("In decodeD")
+    opcode = instruction[2:13]
+    DT_addreess = instruction[13:24]
+    Rn = instruction[24:29]
+    Rd = instruction[29:]
+
+    print(opcode + " " + DT_addreess + " " + Rn + " " + Rd)
+    
+    if instruction_info[0] == "STUR" or "LDUR":
+        print(instruction[0] + " X" + str(int(Rd, 2)) + ", [X" + str(int(Rn, 2)) + ", #" + str(int(DT_addreess, 2) + "]"))
+    else:
+        print("Error decoding D type instruction. Instruction data: " + instruction_info +
+              ". Instruction binary: " + instruction)
+
 
 def decodeBInstruction(instruction, instruction_info):
+    opcode = instruction[2:8]
+    BR_Address = instruction[8:]
+
+    
     print("In decodeB")
 
 
