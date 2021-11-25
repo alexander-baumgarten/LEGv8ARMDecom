@@ -1,3 +1,4 @@
+import struct
 import sys
 
 ### Denotes done
@@ -7,22 +8,23 @@ instruction_dict = [
   ["ADDI", 0b1001000100, "I"], ###
   ["AND", 0b10001010000, "R"], ###
   ["ANDI", 0b1001001000, "I"], ###
-  ["B", 0b000101, "B"],
-  ["BL", 0b100101, "B"],
+  ["B", 0b000101, "B"], ###
+  ["BL", 0b100101, "B"], ###
   ["BR", 0b11010110000, "R"], ###
   ["CBNZ", 0b10110101, "CB"],
   ["CBZ", 0b10110100, "CB"],
-  ["DUMP", 0b11111111110, "DUMP"],
+  ["B.cond", 0b01010100, "CB"],
+  ["DUMP", 0b11111111110, "DUMP"], ###
   ["EOR", 0b11001010000, "R"], ###
   ["EORI", 0b1101001000, "I"], ###
-  ["HALT", 0b11111111111, "HALT"],
+  ["HALT", 0b11111111111, "HALT"], ###
   ["LDUR", 0b11111000010, "D"], ###
   ["LSL", 0b11010011011, "R"], ###
   ["LSR", 0b11010011010, "R"], ###
   ["ORR", 0b10101010000, "R"], ###
   ["ORRI", 0b1011001000, "I"], ###
-  ["PRNL", 0b11111111100, "PRNL"],
-  ["PRNT", 0b11111111101, "PRNT"],
+  ["PRNL", 0b11111111100, "PRNL"], ###
+  ["PRNT", 0b11111111101, "PRNT"], ###
   ["STUR", 0b11111000000, "D"], ###
   ["SUB", 0b11001011000, "R"], ###
   ["SUBI", 0b1101000100, "I"], ###
@@ -46,6 +48,7 @@ def decodeRInstruction(instruction, instruction_info):
     Rn = instruction[24:29]
     Rd = instruction[29:]
     print(opcode + " " + Rm + " " + shamt + " " + Rn + " " + Rd)
+
     if instruction_info[0] == "ADD" or "AND" or "EOR" or "ORR" or "SUB" or "SUBS" or "MUL":
         print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", X" + str(int(Rn, 2)) + ", X" + str(int(Rm, 2)))
     elif instruction_info[0] == "BR":
@@ -59,19 +62,26 @@ def decodeRInstruction(instruction, instruction_info):
 
 def decodeIInstruction(instruction, instruction_info):
     opcode = instruction[2:12] 
-    ALU_immediate = instruction[12:23]
+    ALU_immediate = instruction[12:23] # 0000000001: str
     Rn = instruction[23:29]
     Rd = instruction[29:]
-    print(opcode + " " + ALU_immediate + " " + Rn + " " + Rd)
-    if instruction_info[0] == "ADDI" or "ANDI" or "ORRI" or "SUBI" or "EORI" or "SUBIS": 
-        print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", X" + str(int(Rn, 2)) + ", #" + str(int(ALU_immediate, 2)))
+    print(str(ALU_immediate))
+    print((bytes(ALU_immediate, 'utf-8')))
+    print("bruh what")
+    print((int.from_bytes(bytes(ALU_immediate, 'utf-8'), byteorder='big', signed=False)))
+
+    if instruction_info[0] == "ADDI" or "ANDI" or "ORRI" or "SUBI" or "EORI" or "SUBIS":
+        if str(ALU_immediate[0]) == '1':  # Negative binary int represented in 2's compliment
+            print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", X" + str(int(Rn, 2)) + ", #" + str(
+                struct.unpack('i', struct.pack('I', int(ALU_immediate, 2)))[0])) # Handles 2's compliment of negative i think lol
+        else: # ALU_immediate is positive
+            print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", X" + str(int(Rn, 2)) + ", #" + str(int(ALU_immediate, 2)))
     else:
         print("Error decoding I type instruction. Instruction data: " + instruction_info +
               ". Instruction binary: " + instruction)
 
 
 def decodeDInstruction(instruction, instruction_info):
-    print(str(instruction))
     opcode = instruction[2:13]
     DT_addreess = instruction[13:22]
     op = instruction[22:24]
@@ -81,7 +91,11 @@ def decodeDInstruction(instruction, instruction_info):
     print(opcode + " " + DT_addreess + " " + op + " " + Rn + " " + Rd)
     
     if instruction_info[0] == "STUR" or "LDUR":
-        print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", [X" + str(int(Rn, 2)) + ", #" + str(int(DT_addreess, 2)) + "]")
+        if str(DT_addreess[0]) == '1':
+            print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", [X" + str(int(Rn, 2)) + ", #" + str(
+                struct.unpack('i', struct.pack('I', int(DT_addreess, 2)))[0]) + "]")
+        else:
+            print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", [X" + str(int(Rn, 2)) + ", #" + str(int(DT_addreess, 2)) + "]")
     else:
         print("Error decoding D type instruction. Instruction data: " + instruction_info +
               ". Instruction binary: " + instruction)
@@ -89,30 +103,58 @@ def decodeDInstruction(instruction, instruction_info):
 
 def decodeBInstruction(instruction, instruction_info):
     opcode = instruction[2:8]
-    BR_Address = instruction[8:]
+    BR_address = instruction[8:]
 
+    if instruction_info == "B" or "BL":
+        if str(BR_address[0]) == '1':
+            print(instruction_info[0] + " " + str(struct.unpack('i', struct.pack('I', int(BR_address, 2)))[0]))
+        else:
+            print(instruction_info[0] + " " + str(int(BR_address, 2)))
+    else:
+        print("Error decoding B type instruction. Intruction data: " + instruction_info + ". Instruction binary: " +
+              str(instruction))
     
     print("In decodeB")
 
 
+# Need to account for B.cond, cond_br_addr can be negative ! !
 def decodeCBInstruction(instruction, instruction_info):
-    print("In decodeCB")
+    opcode = instruction[2:10]
+    COND_BR_address = instruction[10:29]
+    Rt = instruction[29:]
 
+    if instruction_info[0] == "CBNZ" or "CBZ":
+        if str(COND_BR_address[0]) == '1':
+            print(instruction_info[0] + " X" + str(int(Rt, 2)) + ", " +
+                  str(struct.unpack('i', struct.pack('I', int(COND_BR_address, 2)))[0]))
+        else:
+            print("Don't branch backwards")
+    elif instruction_info[0] == "B.cond":
+        if str(COND_BR_address[0]) == '1':
+            print("Branch backwards")
+        else:
+            print("Don't branch backwards")
+    else:
+        print("Error decoding CB type instruction. Instruction data: " + instruction_info + ". Instruction binary: " +
+              str(instruction))
 
 def decodeDUMPInstruction(instruction, instruction_info):
-    print("In decodeDUMP")
+    print("DUMP")
 
 
 def decodeHALTInstruction(instruction, instruction_info):
-    print("In decodeHALT")
+    print("HALT")
 
 
 def decodePRNLInstruction(instruction, instruction_info):
-    print("In decodePRNL")
+    print("PRNL")
 
 
+# Check Rd field for register, looks like R instruction
 def decodePRNTInstruction(instruction, instruction_info):
-    print("In decodePRNT")
+    opcode = instruction[2:13]
+    Rd = instruction[29:]
+    print(instruction_info[0] + " X" + str(int(Rd, 2)))
 
 
 if __name__ == "__main__":
