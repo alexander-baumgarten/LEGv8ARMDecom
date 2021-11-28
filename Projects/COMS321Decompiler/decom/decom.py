@@ -1,43 +1,69 @@
-import struct
 import sys
+import struct
+from bitstring import BitArray
 
 ### Denotes done
 
 instruction_dict = [
-  ["ADD", 0b10001011000, "R"], ###
-  ["ADDI", 0b1001000100, "I"], ###
-  ["AND", 0b10001010000, "R"], ###
-  ["ANDI", 0b1001001000, "I"], ###
-  ["B", 0b000101, "B"], ###
-  ["BL", 0b100101, "B"], ###
-  ["BR", 0b11010110000, "R"], ###
-  ["CBNZ", 0b10110101, "CB"],
-  ["CBZ", 0b10110100, "CB"],
-  ["B.cond", 0b01010100, "CB"],
-  ["DUMP", 0b11111111110, "DUMP"], ###
-  ["EOR", 0b11001010000, "R"], ###
-  ["EORI", 0b1101001000, "I"], ###
-  ["HALT", 0b11111111111, "HALT"], ###
-  ["LDUR", 0b11111000010, "D"], ###
-  ["LSL", 0b11010011011, "R"], ###
-  ["LSR", 0b11010011010, "R"], ###
-  ["ORR", 0b10101010000, "R"], ###
-  ["ORRI", 0b1011001000, "I"], ###
-  ["PRNL", 0b11111111100, "PRNL"], ###
-  ["PRNT", 0b11111111101, "PRNT"], ###
-  ["STUR", 0b11111000000, "D"], ###
-  ["SUB", 0b11001011000, "R"], ###
-  ["SUBI", 0b1101000100, "I"], ###
-  ["SUBIS", 0b1111000100, "I"], ###
-  ["SUBS", 0b11101011000, "R"], ###
-  ["MUL", 0b10011011000, "R"] ###
+  ["ADD", "0b10001011000", "R"],
+  ["ADDI", "0b1001000100", "I"],
+  ["AND", "0b10001010000", "R"],
+  ["ANDI", "0b1001001000", "I"],
+  ["BL", "0b100101", "B"],
+  ["BR", "0b11010110000", "R"],
+  ["CBNZ", "0b10110101", "CB"],
+  ["CBZ", "0b10110100", "CB"],
+  ["B.cond", "0b01010100", "CB"],
+  ["DUMP", "0b11111111110", "DUMP"],
+  ["EOR", "0b11001010000", "R"],
+  ["EORI", "0b1101001000", "I"],
+  ["HALT", "0b11111111111", "HALT"],
+  ["LDUR", "0b11111000010", "D"],
+  ["LSL", "0b11010011011", "R"],
+  ["LSR", "0b11010011010", "R"],
+  ["ORR", "0b10101010000", "R"],
+  ["ORRI", "0b1011001000", "I"],
+  ["PRNL", "0b11111111100", "PRNL"],
+  ["PRNT", "0b11111111101", "PRNT"],
+  ["STUR", "0b11111000000", "D"],
+  ["SUB", "0b11001011000", "R"],
+  ["SUBI", "0b1101000100", "I"],
+  ["SUBIS", "0b1111000100", "I"],
+  ["SUBS", "0b11101011000", "R"],
+  ["B", "0b000101", "B"],
+  ["MUL", "0b10011011000", "R"]
+]
+
+cond_dict = [
+    ["EQ", "00000"],
+    ["NE", "00001"],
+    ["HS", "00010"],
+    ["LO", "00011"],
+    ["MI", "00100"],
+    ["PL", "00101"],
+    ["VS", "00110"],
+    ["VC", "00111"],
+    ["HI", "01000"],
+    ["LS", "01001"],
+    ["GE", "01010"],
+    ["LT", "01011"],
+    ["GT", "01100"],
+    ["LE", "01101"],
+]
+
+R_accepted_dict = [
+    "ADD", "AND", "EOR", "ORR", "SUB", "SUBS", "MUL"
+]
+
+I_accepted_dict = [
+    "ADDI", "ANDI", "ORRI", "SUBI", "EORI", "SUBIS"
 ]
 
 def decodeBytes(current_byte):
     if current_byte == 0b0:
         return 0
     for instruction in instruction_dict:
-        if current_byte.startswith(bin(instruction[1])):
+        if current_byte.startswith(instruction[1]):
             return instruction
     return "ERR"
 
@@ -47,95 +73,71 @@ def decodeRInstruction(instruction, instruction_info):
     shamt = instruction[18:24]
     Rn = instruction[24:29]
     Rd = instruction[29:]
-    print(opcode + " " + Rm + " " + shamt + " " + Rn + " " + Rd)
 
-    if instruction_info[0] == "ADD" or "AND" or "EOR" or "ORR" or "SUB" or "SUBS" or "MUL":
+    if instruction_info[0] in R_accepted_dict:
         print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", X" + str(int(Rn, 2)) + ", X" + str(int(Rm, 2)))
     elif instruction_info[0] == "BR":
-        print(instruction_info[0] + " X" + str(int(Rd, 2)))
-    elif instruction_info[0] == "LSL" or "LSR":
-        print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", X" + str(int(Rn, 2)) + ", #" + str(int(shamt)))
+        print(instruction_info[0] + " X" + str(int(Rn, 2)))
+    elif instruction_info[0] == "LSL" or instruction_info[0] == "LSR":
+        print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", X" + str(int(Rn, 2)) + ", #" + str(int(shamt, 2)))
     else:
-        print("Error decoding R type instruction. Instruction data: " + instruction_info +
+        print("Error decoding R type instruction. Instruction data: " + instruction_info[0] +
               ". Instruction binary: " + instruction)
 
 
+# Played around with the BitArray stuff a bit too much here - should still work as intended. Used for getting signed
+# bits from bin()s. Put bin() value in the BitArray with bin=[val], and use .int for signed, and .unit for unsigned
 def decodeIInstruction(instruction, instruction_info):
-    opcode = instruction[2:12] 
-    ALU_immediate = instruction[12:23] # 0000000001: str
-    Rn = instruction[23:29]
+    ALU_immediate = BitArray(bin=instruction[12:24])
+    Rn = instruction[24:29]
     Rd = instruction[29:]
-    print(str(ALU_immediate))
-    print((bytes(ALU_immediate, 'utf-8')))
-    print("bruh what")
-    print((int.from_bytes(bytes(ALU_immediate, 'utf-8'), byteorder='big', signed=False)))
 
-    if instruction_info[0] == "ADDI" or "ANDI" or "ORRI" or "SUBI" or "EORI" or "SUBIS":
-        if str(ALU_immediate[0]) == '1':  # Negative binary int represented in 2's compliment
-            print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", X" + str(int(Rn, 2)) + ", #" + str(
-                struct.unpack('i', struct.pack('I', int(ALU_immediate, 2)))[0])) # Handles 2's compliment of negative i think lol
-        else: # ALU_immediate is positive
-            print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", X" + str(int(Rn, 2)) + ", #" + str(int(ALU_immediate, 2)))
+    if instruction_info[0] in I_accepted_dict:
+        print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", X" + str(int(Rn, 2)) + ", #" + str(ALU_immediate.int))
     else:
-        print("Error decoding I type instruction. Instruction data: " + instruction_info +
+        print("Error decoding I type instruction. Instruction data: " + instruction_info[0] +
               ". Instruction binary: " + instruction)
 
 
 def decodeDInstruction(instruction, instruction_info):
     opcode = instruction[2:13]
-    DT_addreess = instruction[13:22]
+    DT_addreess = BitArray(bin=instruction[13:22])
     op = instruction[22:24]
     Rn = instruction[24:29]
     Rd = instruction[29:]
-
-    print(opcode + " " + DT_addreess + " " + op + " " + Rn + " " + Rd)
     
-    if instruction_info[0] == "STUR" or "LDUR":
-        if str(DT_addreess[0]) == '1':
-            print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", [X" + str(int(Rn, 2)) + ", #" + str(
-                struct.unpack('i', struct.pack('I', int(DT_addreess, 2)))[0]) + "]")
-        else:
-            print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", [X" + str(int(Rn, 2)) + ", #" + str(int(DT_addreess, 2)) + "]")
+    if instruction_info[0] == "STUR" or instruction_info[0] == "LDUR":
+        print(instruction_info[0] + " X" + str(int(Rd, 2)) + ", [X" + str(int(Rn, 2)) + ", #" + str(DT_addreess.int) + "]")
     else:
-        print("Error decoding D type instruction. Instruction data: " + instruction_info +
+        print("Error decoding D type instruction. Instruction data: " + instruction_info[0] +
               ". Instruction binary: " + instruction)
 
 
 def decodeBInstruction(instruction, instruction_info):
     opcode = instruction[2:8]
-    BR_address = instruction[8:]
+    BR_address = BitArray(bin=instruction[8:])
 
-    if instruction_info == "B" or "BL":
-        if str(BR_address[0]) == '1':
-            print(instruction_info[0] + " " + str(struct.unpack('i', struct.pack('I', int(BR_address, 2)))[0]))
-        else:
-            print(instruction_info[0] + " " + str(int(BR_address, 2)))
+    if instruction_info[0] == "B" or instruction_info[0] == "BL":
+        print(instruction_info[0] + " " + str(BR_address.int))
     else:
-        print("Error decoding B type instruction. Intruction data: " + instruction_info + ". Instruction binary: " +
+        print("Error decoding B type instruction. Instruction data: " + instruction_info[0] + ". Instruction binary: " +
               str(instruction))
-    
-    print("In decodeB")
 
 
-# Need to account for B.cond, cond_br_addr can be negative ! !
 def decodeCBInstruction(instruction, instruction_info):
     opcode = instruction[2:10]
-    COND_BR_address = instruction[10:29]
+    COND_BR_address = BitArray(bin=instruction[10:29])
     Rt = instruction[29:]
 
-    if instruction_info[0] == "CBNZ" or "CBZ":
-        if str(COND_BR_address[0]) == '1':
-            print(instruction_info[0] + " X" + str(int(Rt, 2)) + ", " +
-                  str(struct.unpack('i', struct.pack('I', int(COND_BR_address, 2)))[0]))
-        else:
-            print("Don't branch backwards")
+    if instruction_info[0] == "CBNZ" or instruction_info[0] == "CBZ":
+        print(instruction_info[0] + " X" + str(int(Rt, 2)) + ", " +
+              str(COND_BR_address.int))
     elif instruction_info[0] == "B.cond":
-        if str(COND_BR_address[0]) == '1':
-            print("Branch backwards")
-        else:
-            print("Don't branch backwards")
+        for cond in cond_dict:
+            if Rt == cond[1]:
+                print("B." + cond[0] + " " + str(COND_BR_address.int))
     else:
-        print("Error decoding CB type instruction. Instruction data: " + instruction_info + ". Instruction binary: " +
+        print("Error decoding CB type instruction. Instruction data: " + instruction_info[0] + ". Instruction binary: " +
               str(instruction))
 
 def decodeDUMPInstruction(instruction, instruction_info):
@@ -161,6 +163,12 @@ if __name__ == "__main__":
     f = open(sys.argv[1], "rb")
     while True:
         current_byte = bin(int.from_bytes(f.read(4), byteorder='big'))
+
+        if len(current_byte) == 31: # Super super scuffed way to handle this issue.. bin() gets rid of leading zeroes so i'm adding them in manually lol
+            current_byte = current_byte[:2] + "000" + current_byte[2:]
+        elif len(current_byte) == 33:
+            current_byte = current_byte[:2] + "0" + current_byte[2:]
+
         if current_byte == bin(0b0):
             break
         else:
@@ -168,6 +176,7 @@ if __name__ == "__main__":
             if instruction == "ERR":
                 print("ERROR: Failure reading opcode. Result: " + instruction + ". Input: " + current_byte)
                 exit()
+
         if instruction[2] == "R":
             decodeRInstruction(current_byte, instruction)
         elif instruction[2] == "I":
